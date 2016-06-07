@@ -1,3 +1,38 @@
+/**
+ * Retrieves all the rows in the active spreadsheet that contain data and logs the
+ * values for each row.
+ * For more information on using the Spreadsheet API, see
+ * https://developers.google.com/apps-script/service_spreadsheet
+ */
+function readRows() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var rows = sheet.getDataRange();
+  var numRows = rows.getNumRows();
+  var values = rows.getValues();
+
+  for (var i = 0; i <= numRows - 1; i++) {
+    var row = values[i];
+    Logger.log(row);
+  }
+};
+
+/**
+ * Adds a custom menu to the active spreadsheet, containing a single menu item
+ * for invoking the readRows() function specified above.
+ * The onOpen() function, when defined, is automatically invoked whenever the
+ * spreadsheet is opened.
+ * For more information on using the Spreadsheet API, see
+ * https://developers.google.com/apps-script/service_spreadsheet
+ */
+function onOpen() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet();
+  var entries = [{
+    name : "Read Data",
+    functionName : "readRows"
+  }];
+  sheet.addMenu("Script Center Menu", entries);
+};
+
 /*====================================================================================================================================*
   ImportJSON by Trevor Lohrbeer (@FastFedora)
   ====================================================================================================================================
@@ -60,6 +95,19 @@
  * @return a two-dimensional array containing the data, with the first row containing headers
  **/
 function ImportJSON(url, query, parseOptions) {
+  return ImportJSONAdvanced(url, null, query, parseOptions, includeXPath_, defaultTransform_);
+}
+
+function testUrlFetch(){
+  var jsondata = UrlFetchApp.fetch("https://rsbuddy.com/exchange/summary.json", {headers : {"Content-Type": "application/vnd.api+json", "Accept" : "application/vnd.api+json"}});
+  var object = JSON.parse(jsondata.getContentText());
+}
+
+function testImportJSON(){
+  var url = "http://api.rsbuddy.com/grandExchange?a=guidePrice&i=3853";
+  var query = "/buying";
+  var parseOptions = "noInherit,noTruncate,noHeaders,exact";
+  
   return ImportJSONAdvanced(url, null, query, parseOptions, includeXPath_, defaultTransform_);
 }
 
@@ -165,7 +213,8 @@ function ImportJSONViaPost(url, payload, fetchOptions, query, parseOptions) {
  * @return a two-dimensional array containing the data, with the first row containing headers
  **/
 function ImportJSONAdvanced(url, fetchOptions, query, parseOptions, includeFunc, transformFunc) {
-  var jsondata = UrlFetchApp.fetch(url, fetchOptions);
+  //var jsondata = UrlFetchApp.fetch(url, fetchOptions);
+  var jsondata = UrlFetchApp.fetch(url, {headers : {"Content-Type": "application/vnd.api+json", "Accept" : "application/vnd.api+json"}});
   var object   = JSON.parse(jsondata.getContentText());
   
   return parseJSONObject_(object, query, parseOptions, includeFunc, transformFunc);
@@ -283,7 +332,7 @@ function parseData_(headers, data, path, state, value, query, options, includeFu
       if (parseData_(headers, data, path, state, value[i], query, options, includeFunc)) {
         dataInserted = true;
 
-        if (i > 0 && data[state.rowIndex]) {
+        if (i >= 0 && data[state.rowIndex]) {
           state.rowIndex++;
         }
       }
@@ -383,7 +432,12 @@ function includeXPath_(query, path, options) {
  * Returns true if the rule applies to the given path. 
  */
 function applyXPathRule_(rule, path, options) {
-  return path.indexOf(rule) == 0; 
+  if(hasOption_(options, "exact")) {
+     return rule == path;
+  }
+  else {
+     return path.indexOf(rule) == 0;
+  }
 }
 
 /** 
